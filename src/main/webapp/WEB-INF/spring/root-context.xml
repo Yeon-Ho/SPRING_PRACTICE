@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	<!-- 어디서나 참조가 가능해야하는 Bean들을 root-context.xml에 등록 -->
+		
+	<!--
+	PropertyPlaceholderConfigurer
+	 외부의 프로퍼티에 저장된 정보를 스프링 설정파일에서 사용할 수 있도록 해주는 bean -->
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:mybatis/db.properties</value>
+			</list>
+		</property>
+	</bean>
+	<!-- classpath : src/main/javaj, src/main/resources -->
+	
+	<!-- SqlSessionFactoryBean의 setDataSource 메소드에 전달하기 위한 dataSource 타입의 객체를 생성 -->
+	<bean id="dataSourceSpied" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${driver}" />
+		<property name="url" value="${url}" />
+		<property name="username" value="${username}" />
+		<property name="password" value="${password}" />
+	</bean>
+	
+	<!-- query가 실행될 때 log를 찍어주는 proxy 객체를 설정하는 bean -->
+	<bean id="dataSource" class="net.sf.log4jdbc.Log4jdbcProxyDataSource">
+		<constructor-arg ref="dataSourceSpied" />
+		<property name="logFormatter">
+			<bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">
+				<property name="loggingType" value="MULTI_LINE" />
+<!-- 				<property name="margin" value="19" /> *** 속성 적용 안됨 *** -->
+				<property name="sqlPrefix" value="SQL :::" />
+			</bean>
+		</property>
+	</bean>
+	
+	<!-- sqlSessionFactoryBean을 등록 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+	  <property name="dataSource" ref="dataSource" />
+	  <property name="configLocation" value="classpath:mybatis/config.xml" />
+	  <property name="mapperLocations" value="classpath:mybatis/mapper/*.xml" />
+	</bean>
+	
+	
+	<!--
+	sqlSessionTemplate
+		멀티 쓰레드 환경에 안전, bean으로 등록하여 사용할 수 있다.
+		Spring의 트랜잭션 관리 기술과 연동하여 트랜잭션관리를 Spring으로 할 수 있게 해준다.
+		mybatisException을 DataAccessExceprion으로 바꿔준다.
+	-->
+	<bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg ref="sqlSessionFactory" />
+	</bean>
+	
+	
+	
+	<!-- 스프링에서 multipart 데이터 처리를 담당하는 클래스 -->
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize" value="100000000" />
+		<property name="maxInMemorySize" value="100000000" />
+	</bean>
+	
+	
+	
+</beans>
